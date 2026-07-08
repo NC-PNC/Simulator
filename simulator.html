@@ -340,7 +340,7 @@
       <div class="top-left">
         <div>
           <strong id="currentMonthTitle">이번 달 현황</strong>
-          <div class="footer-note" id="storageNote">입력 데이터는 현재 브라우저에 저장됩니다. 화면은 항상 전체 대시보드로 보이며, 공유 대상만 선택해 잔액 보기 링크를 만들 수 있습니다.</div>
+          <div class="footer-note" id="storageNote">입력 데이터는 현재 브라우저에 저장됩니다. 화면은 항상 전체 대시보드로 보이며, 공유 대상별 최신 잔액 링크를 만들 수 있습니다.</div>
         </div>
         <div class="toolbar">
           <label for="monthSelect">조회 월</label>
@@ -363,6 +363,7 @@
           </div>
           <button type="button" class="btn-subtle edit-only" id="copyShareBtn">링크 복사</button>
           <button type="button" class="btn-green edit-only" id="downloadViewBtn">HTML</button>
+          <button type="button" class="btn-subtle edit-only" id="downloadJsonBtn">data.json</button>
         </div>
       </div>
     </section>
@@ -447,6 +448,8 @@
     const GROUPS = ["보상팀", "평가팀", "실장님"];
     const COMMON_GROUP = "공통";
     const ALL_VIEWS = ["전체", ...GROUPS, COMMON_GROUP];
+    const SHARE_TARGET_CODES = { "전체": "all", "보상팀": "reward", "평가팀": "review", "실장님": "head", "공통": "common" };
+    const SHARE_TARGET_LABELS = { all: "전체", reward: "보상팀", review: "평가팀", evaluation: "평가팀", head: "실장님", headgroup: "실장님", common: "공통" };
     const CATEGORIES = ["조활비", "업무회의비"];
     const DEFAULT_BUDGETS = {
       "보상팀": [
@@ -474,7 +477,7 @@
 
     const els = {
       monthSelect: document.getElementById("monthSelect"), newMonthInput: document.getElementById("newMonthInput"), addMonthBtn: document.getElementById("addMonthBtn"), currentMonthTitle: document.getElementById("currentMonthTitle"), storageNote: document.getElementById("storageNote"),
-      viewModeSelect: document.getElementById("viewModeSelect"), copyShareBtn: document.getElementById("copyShareBtn"), downloadViewBtn: document.getElementById("downloadViewBtn"),
+      viewModeSelect: document.getElementById("viewModeSelect"), copyShareBtn: document.getElementById("copyShareBtn"), downloadViewBtn: document.getElementById("downloadViewBtn"), downloadJsonBtn: document.getElementById("downloadJsonBtn"),
       budgetTable: document.getElementById("budgetTable"), budgetGroupInput: document.getElementById("budgetGroupInput"), budgetNameInput: document.getElementById("budgetNameInput"), budgetCategoryInput: document.getElementById("budgetCategoryInput"), budgetAmountInput: document.getElementById("budgetAmountInput"), addBudgetRowBtn: document.getElementById("addBudgetRowBtn"), resetBudgetBtn: document.getElementById("resetBudgetBtn"),
       expenseForm: document.getElementById("expenseForm"), dateInput: document.getElementById("dateInput"), groupInput: document.getElementById("groupInput"), descInput: document.getElementById("descInput"), amountInput: document.getElementById("amountInput"), categoryInput: document.getElementById("categoryInput"), systemGroupField: document.getElementById("systemGroupField"), systemGroupInput: document.getElementById("systemGroupInput"), allocationBox: document.getElementById("allocationBox"), allocRewardInput: document.getElementById("allocRewardInput"), allocReviewInput: document.getElementById("allocReviewInput"), allocHeadInput: document.getElementById("allocHeadInput"), allocationTotalText: document.getElementById("allocationTotalText"), receiptInput: document.getElementById("receiptInput"), noteInput: document.getElementById("noteInput"), resetFormBtn: document.getElementById("resetFormBtn"), submitBtn: document.getElementById("submitBtn"),
       tetrisTrack: document.getElementById("tetrisTrack"), systemBox: document.getElementById("systemBox"), tetrisMessage: document.getElementById("tetrisMessage"), totalStatus: document.getElementById("totalStatus"), systemToggleBtn: document.getElementById("systemToggleBtn"), systemPanel: document.getElementById("systemPanel"), groupBoard: document.getElementById("groupBoard")
@@ -553,6 +556,35 @@
       return next;
     }
 
+    function readFixedShareTarget() {
+      try {
+        const params = new URLSearchParams(location.search || "");
+        const raw = params.get("target") || params.get("view") || params.get("shareTarget");
+        if (!raw) return null;
+        const decoded = decodeURIComponent(raw).trim();
+        if (ALL_VIEWS.includes(decoded)) return decoded;
+        return SHARE_TARGET_LABELS[decoded.toLowerCase()] || null;
+      } catch { return null; }
+    }
+
+    function getDataJsonUrl() {
+      return new URL("data.json", location.href.split("#")[0]).toString();
+    }
+
+    function readRemoteDataJsonState() {
+      if (!isHostedUrl()) return null;
+      try {
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", getDataJsonUrl() + `?v=${Date.now()}`, false);
+        xhr.send(null);
+        if (xhr.status < 200 || xhr.status >= 300) return null;
+        const payload = JSON.parse(xhr.responseText);
+        if (payload && payload.schema === "activity-budget-dashboard-data" && payload.state) return normalizeState(payload.state);
+        if (payload && payload.state) return normalizeState(payload.state);
+        return normalizeState(payload);
+      } catch { return null; }
+    }
+
     function readEmbeddedPackage() {
       try {
         const text = document.getElementById("embeddedData")?.textContent?.trim();
@@ -579,6 +611,20 @@
     }
 
     function loadInitialState() {
+      const fixedTarget = readFixedShareTarget();
+      if (fixedTarget) {
+        readOnly = true;
+        viewMode = fixedTarget;
+        const remoteState = readRemoteDataJsonState();
+        if (remoteState) return remoteState;
+        const sharedFallback = readHashPackage() || readEmbeddedPackage();
+        if (sharedFallback && sharedFallback.state) return normalizeState(sharedFallback.state);
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? normalizeState(JSON.parse(raw)) : createDefaultState();
+        } catch { return createDefaultState(); }
+      }
+
       const shared = readHashPackage() || readEmbeddedPackage();
       if (shared && shared.state) {
         readOnly = true;
@@ -903,7 +949,10 @@
     }
     function isHostedUrl() { return location.protocol === "https:" || location.protocol === "http:"; }
     function getShareBaseUrl() { return location.href.split("#")[0].split("?")[0]; }
-    function buildShareLink(target) { return `${getShareBaseUrl()}#share=${encodeSharePackage(createSharePackage(target))}`; }
+    function buildShareLink(target) {
+      const code = SHARE_TARGET_CODES[target] || "all";
+      return `${getShareBaseUrl()}?target=${encodeURIComponent(code)}`;
+    }
     async function copyShareLink() {
       const target = readOnly ? viewMode : els.viewModeSelect.value;
       if (!isHostedUrl()) {
@@ -913,13 +962,22 @@
       const url = buildShareLink(target);
       try {
         await navigator.clipboard.writeText(url);
-        alert(`${target} 잔액 보기용 공유 링크를 복사했습니다. 채팅방에 붙여넣으면 https://로 시작하는 링크로 표시됩니다.`);
+        alert(`${target} 최신 잔액 보기용 고정 링크를 복사했습니다. 이 링크는 같은 저장소의 data.json을 기준으로 열립니다.`);
       } catch {
-        prompt("아래 공유 링크를 복사해 주세요. 반드시 https://부터 끝까지 복사해야 합니다.", url);
+        prompt("아래 공유 링크를 복사해 주세요. 대상별 고정 링크이며 data.json 최신본을 기준으로 열립니다.", url);
       }
     }
     function downloadText(filename, text, type="text/plain") { const blob = new Blob([text], {type}); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href); }
-    function exportJson() { downloadText(`조활비_대시보드_백업_${state.selectedMonth}.json`, JSON.stringify(state, null, 2), "application/json"); }
+    function exportJson() {
+      const payload = {
+        schema: "activity-budget-dashboard-data",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        selectedMonth: state.selectedMonth,
+        state: normalizeState(clone(state))
+      };
+      downloadText("data.json", JSON.stringify(payload, null, 2), "application/json");
+    }
     function importJson(file) { if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const imported = normalizeState(JSON.parse(reader.result)); if (!confirm("현재 브라우저 데이터를 가져온 JSON으로 교체할까요?")) return; state = imported; resetForm(); renderAll(); alert("JSON 데이터를 가져왔습니다."); } catch { alert("JSON 파일을 읽지 못했습니다."); } }; reader.readAsText(file); }
     function downloadViewHtml() { const target = readOnly ? viewMode : els.viewModeSelect.value; const doc = document.documentElement.cloneNode(true); const embedded = doc.querySelector("#embeddedData"); embedded.textContent = JSON.stringify(createSharePackage(target)); const htmlOut = "<!DOCTYPE html>\n" + doc.outerHTML; downloadText(`조활비_${target}_보기_${state.selectedMonth}.html`, htmlOut, "text/html"); }
 
@@ -930,7 +988,7 @@
         els.expenseForm.classList.add("hidden");
         if (systemCard) systemCard.classList.add("hidden");
         els.viewModeSelect.disabled = true;
-        els.storageNote.textContent = "공유용 보기 화면입니다. 상세 내역 없이 잔액 요약만 표시됩니다.";
+        els.storageNote.textContent = "공유용 보기 화면입니다. 같은 저장소의 data.json 최신본을 기준으로 잔액 요약만 표시됩니다.";
       } else {
         els.expenseForm.classList.remove("hidden");
         if (systemCard) systemCard.classList.remove("hidden");
@@ -943,9 +1001,9 @@
     els.viewModeSelect.addEventListener("change", e => {
       if (readOnly) return;
       shareTarget = e.target.value;
-      els.storageNote.textContent = `${shareTarget} 잔액 보기용 공유 대상을 선택했습니다. 현재 화면은 전체 대시보드로 유지됩니다.`;
+      els.storageNote.textContent = `${shareTarget} 최신 잔액 보기용 공유 대상을 선택했습니다. 현재 화면은 전체 대시보드로 유지됩니다.`;
     });
-    els.copyShareBtn.addEventListener("click", copyShareLink); els.downloadViewBtn.addEventListener("click", downloadViewHtml); els.systemToggleBtn.addEventListener("click", toggleSystemPanel);
+    els.copyShareBtn.addEventListener("click", copyShareLink); els.downloadViewBtn.addEventListener("click", downloadViewHtml); els.downloadJsonBtn.addEventListener("click", exportJson); els.systemToggleBtn.addEventListener("click", toggleSystemPanel);
     els.expenseForm.addEventListener("submit", addOrUpdateExpense); els.resetFormBtn.addEventListener("click", resetForm); els.groupInput.addEventListener("change", updateAllocationVisibility); [els.amountInput, els.allocRewardInput, els.allocReviewInput, els.allocHeadInput].forEach(el => el.addEventListener("input", updateAllocationText));
     els.budgetTable.addEventListener("change", e => { const id = e.target.dataset.budgetId; if (!id) return; updateBudgetRow(id, e.target.dataset.field, e.target.value); });
     els.budgetTable.addEventListener("click", e => { const btn = e.target.closest("button[data-delete-budget]"); if (btn) deleteBudgetRow(btn.dataset.deleteBudget); });
