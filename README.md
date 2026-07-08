@@ -1,3 +1,2 @@
 # Simulator
-  Compensation
-  Assessment
+  Compensation & Assessment
