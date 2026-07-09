@@ -170,7 +170,17 @@
     .readonly-context-item.days-left { background:linear-gradient(145deg,#eef2ff,#f8fafc); border-color:#c7d2fe; }
     .readonly-context-item.days-left strong { color:#4338ca; }
     .readonly-context-item.days-left small { display:block; color:#6366f1; font-size:11px; font-weight:800; margin-top:4px; }
-    .readonly-balance-card h3 { margin:0 0 6px; font-size:20px; }
+    .readonly-balance-card h3 { margin:0; font-size:20px; }
+    .share-card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+    .business-dday { flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; padding:5px 8px; border-radius:999px; background:#eef2ff; border:1px solid #c7d2fe; color:#4338ca; font-size:11px; font-weight:900; letter-spacing:.01em; white-space:nowrap; }
+    .balance-line { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px; margin-top:2px; }
+    .balance-line strong { font-size:24px; line-height:1.15; letter-spacing:-.04em; }
+    .balance-line .slash-total { color:var(--muted); font-size:14px; font-weight:800; }
+    .usage-pill { display:inline-flex; align-items:center; justify-content:center; min-width:64px; padding:4px 8px; border-radius:10px; background:#f1f5f9; border:1px solid var(--line); color:#334155; font-size:12px; font-weight:900; }
+    .usage-pill.over { background:#fef2f2; border-color:#fecaca; color:#b91c1c; }
+    .usage-pill.warning { background:#fffbeb; border-color:#fde68a; color:#92400e; }
+    .share-balance-bar { margin-top:10px; }
+    .share-card-note { margin-top:8px; color:var(--muted); font-size:11px; font-weight:700; }
 
     /* 좌우 분할형 작업 화면 */
     .dashboard-layout { display:grid; grid-template-columns: minmax(520px, 0.95fr) minmax(560px, 1.05fr); gap:14px; align-items:start; }
@@ -516,8 +526,8 @@
       ]
     };
 
-    // 공유용 화면의 월 위임금액 총액은 구성원 수/수동 조정/최종 위임금액과 무관한 고정 기준값입니다.
-    const SHARE_MONTHLY_DELEGATION_TOTAL = 1260000;
+    // 공유용 화면의 팀별 기본 위임금액은 구성원 수 변동/수동 조정/최종 위임금액과 무관한 고정 기준값입니다.
+    const SHARE_BASE_DELEGATION = { "보상팀": 470000, "평가팀": 410000, "실장님": 380000 };
 
     const els = {
       monthSelect: document.getElementById("monthSelect"), newMonthInput: document.getElementById("newMonthInput"), addMonthBtn: document.getElementById("addMonthBtn"), currentMonthTitle: document.getElementById("currentMonthTitle"), storageNote: document.getElementById("storageNote"),
@@ -553,35 +563,50 @@
     }
     function getDataUpdatedAt() { return dataSourceMeta.exportedAt || state.lastUpdatedAt || dataSourceMeta.loadedAt; }
     function getDataUpdatedLabel() { return `데이터 최신 업데이트: ${formatDateOnly(getDataUpdatedAt())}`; }
+    function countBusinessDays(startDate, endDate, includeStart = true) {
+      const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      if (start > end) return 0;
+      let count = 0;
+      const cursor = new Date(start);
+      if (!includeStart) cursor.setDate(cursor.getDate() + 1);
+      while (cursor <= end) {
+        const day = cursor.getDay();
+        if (day !== 0 && day !== 6) count += 1;
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return count;
+    }
     function getSelectedMonthContext() {
       const [year, month] = state.selectedMonth.split("-").map(Number);
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const start = new Date(year, month - 1, 1);
       const end = new Date(year, month, 0);
-      const msPerDay = 24 * 60 * 60 * 1000;
       if (today < start) {
-        const daysUntil = Math.ceil((start - today) / msPerDay);
-        return { label: `${month}월 시작까지`, value: `D-${daysUntil}`, note: `${formatDateOnly(start)} 시작` };
+        const businessDaysUntil = countBusinessDays(today, start, false);
+        return { label: `${month}월 영업일`, value: `D-${businessDaysUntil}`, note: `${month}월 시작까지 남은 영업일` };
       }
       if (today > end) {
-        return { label: `${month}월 현황`, value: "마감 완료", note: `${formatDateOnly(end)} 기준` };
+        return { label: `${month}월 영업일`, value: "마감", note: "해당 월이 종료되었습니다" };
       }
-      const daysLeft = Math.max(0, Math.ceil((end - today) / msPerDay));
+      const businessDaysLeft = countBusinessDays(today, end, false);
       return {
-        label: `${month}월 남은 기간`,
-        value: daysLeft === 0 ? "오늘이 마지막 날" : `D-${daysLeft}`,
-        note: daysLeft === 0 ? "이번 달 마감일입니다" : `이번 달 종료까지 ${daysLeft}일 남았습니다`
+        label: `${month}월 영업일`,
+        value: `D-${String(businessDaysLeft).padStart(2, "0")}`,
+        note: businessDaysLeft === 0 ? "마지막 영업일 또는 월말입니다" : `월말까지 ${businessDaysLeft}영업일 남았습니다`
       };
     }
     function buildReadOnlyContextStrip() {
       const [, month] = state.selectedMonth.split("-").map(Number);
-      const timing = getSelectedMonthContext();
-      return `<div class="readonly-context-strip">
-        <div class="readonly-context-item"><span>조회 월</span><strong>${month}월 현황</strong></div>
-        <div class="readonly-context-item"><span>월 기본 위임금액 총액</span><strong>${formatWon(SHARE_MONTHLY_DELEGATION_TOTAL)}</strong></div>
-        <div class="readonly-context-item days-left"><span>${timing.label}</span><strong>${timing.value}</strong><small>${timing.note}</small></div>
-      </div>`;
+      const targetGroup = viewMode === "보상팀" ? "보상팀" : viewMode === "평가팀" ? "평가팀" : viewMode === "실장님" ? "실장님" : null;
+      let delegationCard;
+      if (targetGroup) {
+        delegationCard = `<div class="readonly-context-item"><span>${targetGroup} 월 위임금액</span><strong>${formatWon(SHARE_BASE_DELEGATION[targetGroup])}</strong></div>`;
+      } else {
+        delegationCard = `<div class="readonly-context-item"><span>팀별 월 위임금액</span><strong style="font-size:15px;line-height:1.55">보상팀 ${formatWon(SHARE_BASE_DELEGATION["보상팀"])}<br>평가팀 ${formatWon(SHARE_BASE_DELEGATION["평가팀"])}<br>실장님 ${formatWon(SHARE_BASE_DELEGATION["실장님"])}</strong></div>`;
+      }
+      return `<div class="readonly-context-strip">${delegationCard}</div>`;
     }
 
     function applySystemPanelState() {
@@ -954,25 +979,44 @@
       const groups = viewMode === "전체" ? GROUPS : GROUPS.includes(viewMode) ? [viewMode] : [];
       const updateNote = `<div class="readonly-update-note">${getDataUpdatedLabel()}</div>`;
       const contextStrip = buildReadOnlyContextStrip();
+      const [, month] = state.selectedMonth.split("-").map(Number);
+      const timing = getSelectedMonthContext();
+      const ddayBadge = `<span class="business-dday" title="${escapeHtml(timing.note)}">${month}월 영업일 ${timing.value}</span>`;
       if (viewMode === COMMON_GROUP) {
-        els.groupBoard.innerHTML = `<div class="readonly-balance-board">${updateNote}${contextStrip}<article class="card readonly-balance-card"><h3>공통 사용금액</h3><div class="remaining ok">${formatWon(stats.commonTotal)}</div><div class="footer-note">공유용 링크에서는 상세 내역 없이 잔액/금액만 표시합니다.</div></article></div>`;
+        els.groupBoard.innerHTML = `<div class="readonly-balance-board">${updateNote}${contextStrip}<article class="card readonly-balance-card"><div class="share-card-head"><h3>공통 사용금액 (${month}월)</h3>${ddayBadge}</div><div class="balance-line"><strong>${formatWon(stats.commonTotal)}</strong></div></article></div>`;
         return;
       }
-      const totalRemaining = groups.reduce((sum, group) => sum + stats.groups[group].remaining, 0);
+      const totalBaseDelegation = groups.reduce((sum, group) => sum + (SHARE_BASE_DELEGATION[group] || 0), 0);
+      const totalSpent = groups.reduce((sum, group) => sum + stats.groups[group].spent, 0);
+      const totalRemaining = totalBaseDelegation - totalSpent;
+      const totalUsageRate = totalBaseDelegation > 0 ? (totalSpent / totalBaseDelegation) * 100 : 0;
       const totalClass = totalRemaining < 0 ? "over" : totalRemaining <= 30000 ? "warning" : "ok";
+      const totalUsageClass = totalUsageRate > 100 ? "over" : totalUsageRate >= 85 ? "warning" : "";
       const totalCard = viewMode === "전체" ? `<article class="card readonly-balance-card readonly-total-card">
-        <h3>전체 잔액</h3>
-        <div class="remaining ${totalClass}">${totalRemaining < 0 ? `초과 ${formatWon(Math.abs(totalRemaining))}` : formatWon(totalRemaining)}</div>
-        <div class="footer-note">${formatMonth(state.selectedMonth)} 기준 전체 잔액입니다.</div>
+        <div class="share-card-head"><h3>전체 조활비 잔액 (${month}월)</h3>${ddayBadge}</div>
+        <div class="balance-line">
+          <strong class="${totalClass}">${totalRemaining < 0 ? `초과 ${formatWon(Math.abs(totalRemaining))}` : formatWon(totalRemaining)}</strong>
+          <span class="slash-total">/ ${formatWon(totalBaseDelegation)}</span>
+          <span class="usage-pill ${totalUsageClass}">${totalUsageRate.toFixed(1)}%</span>
+        </div>
+        <div class="bar share-balance-bar"><div class="bar-fill ${totalClass}" style="width:${Math.min(totalUsageRate,100)}%"></div></div>
       </article>` : "";
       els.groupBoard.innerHTML = `<div class="readonly-balance-board">${updateNote}${contextStrip}${totalCard}${groups.map(group => {
         const s = stats.groups[group];
-        const klass = statusClass(s.spent, s.budget);
-        const remainingText = s.remaining < 0 ? `초과 ${formatWon(Math.abs(s.remaining))}` : formatWon(s.remaining);
+        const baseDelegation = SHARE_BASE_DELEGATION[group] || 0;
+        const usageRate = baseDelegation > 0 ? (s.spent / baseDelegation) * 100 : 0;
+        const shareRemaining = baseDelegation - s.spent;
+        const klass = statusClass(s.spent, baseDelegation);
+        const usageClass = usageRate > 100 ? "over" : usageRate >= 85 ? "warning" : "";
+        const remainingText = shareRemaining < 0 ? `초과 ${formatWon(Math.abs(shareRemaining))}` : formatWon(shareRemaining);
         return `<article class="card readonly-balance-card">
-          <h3>${group} 잔액</h3>
-          <div class="remaining ${klass}">${remainingText}</div>
-          <div class="footer-note">공유용 링크에서는 상세 내역 없이 잔액만 표시합니다.</div>
+          <div class="share-card-head"><h3>${group} 조활비 잔액 (${month}월)</h3>${ddayBadge}</div>
+          <div class="balance-line">
+            <strong class="${klass}">${remainingText}</strong>
+            <span class="slash-total">/ ${formatWon(baseDelegation)}</span>
+            <span class="usage-pill ${usageClass}">${usageRate.toFixed(1)}%</span>
+          </div>
+          <div class="bar share-balance-bar"><div class="bar-fill ${klass}" style="width:${Math.min(usageRate,100)}%"></div></div>
         </article>`;
       }).join("")}</div>`;
     }
