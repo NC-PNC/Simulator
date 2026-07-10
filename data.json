@@ -1,7 +1,7 @@
 {
   "schema": "activity-budget-dashboard-data",
   "version": 1,
-  "exportedAt": "2026-07-08T09:04:46.873Z",
+  "exportedAt": "2026-07-10T08:46:47.568Z",
   "selectedMonth": "2026-07",
   "state": {
     "version": 4,
@@ -10,43 +10,43 @@
       "보상팀": [
         {
           "id": "rw-r1",
-          "name": "정규직 1",
+          "name": "장혁민",
           "category": "조활비",
           "amount": 80000
         },
         {
           "id": "rw-r2",
-          "name": "정규직 2",
+          "name": "장병국",
           "category": "조활비",
           "amount": 80000
         },
         {
           "id": "rw-r3",
-          "name": "정규직 3",
+          "name": "백은정",
           "category": "조활비",
           "amount": 80000
         },
         {
           "id": "rw-r4",
-          "name": "정규직 4",
+          "name": "이예지",
           "category": "조활비",
           "amount": 80000
         },
         {
           "id": "rw-r5",
-          "name": "정규직 5",
+          "name": "이지은",
           "category": "조활비",
           "amount": 80000
         },
         {
           "id": "rw-c1",
-          "name": "겸직 1",
+          "name": "조경민",
           "category": "조활비",
           "amount": 30000
         },
         {
           "id": "rw-t1",
-          "name": "계약직 1",
+          "name": "박혜원",
           "category": "조활비",
           "amount": 40000
         }
@@ -54,37 +54,37 @@
       "평가팀": [
         {
           "id": "rv-r1",
-          "name": "정규직 1",
+          "name": "조영진",
           "category": "조활비",
           "amount": 80000
         },
         {
           "id": "rv-r2",
-          "name": "정규직 2",
+          "name": "김성훈",
           "category": "조활비",
           "amount": 80000
         },
         {
           "id": "rv-r3",
-          "name": "정규직 3",
+          "name": "정우진",
           "category": "조활비",
           "amount": 80000
         },
         {
           "id": "rv-r4",
-          "name": "정규직 4",
+          "name": "홍진기(퇴사)",
           "category": "조활비",
           "amount": 80000
         },
         {
           "id": "rv-c1",
-          "name": "겸직 1",
+          "name": "조경민",
           "category": "조활비",
           "amount": 50000
         },
         {
           "id": "rv-t1",
-          "name": "계약직 1",
+          "name": "박혜원",
           "category": "조활비",
           "amount": 40000
         }
@@ -92,13 +92,13 @@
       "실장님": [
         {
           "id": "hd-a1",
-          "name": "개인 활동비",
+          "name": "한지호",
           "category": "조활비",
           "amount": 80000
         },
         {
           "id": "hd-m1",
-          "name": "업무회의비",
+          "name": "한지호",
           "category": "업무회의비",
           "amount": 300000
         }
@@ -141,6 +141,24 @@
           "note": "",
           "createdAt": 1783501484263,
           "updatedAt": 1783501484263
+        },
+        {
+          "id": "mreoyjq7qc21by",
+          "date": "2026-07-06",
+          "group": "공통",
+          "description": "생일 케이크 (경민님)",
+          "amount": 67500,
+          "category": "조활비",
+          "systemGroup": "보상팀",
+          "allocations": {
+            "보상팀": 33750,
+            "평가팀": 33750,
+            "실장님": 0
+          },
+          "receiptRequired": true,
+          "note": "",
+          "createdAt": 1783673182303,
+          "updatedAt": 1783673206478
         }
       ]
     },
@@ -163,6 +181,6 @@
         }
       }
     },
-    "lastUpdatedAt": 1783501484267
+    "lastUpdatedAt": 1783673207568
   }
 }
