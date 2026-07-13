@@ -1,7 +1,7 @@
 {
   "schema": "activity-budget-dashboard-data",
   "version": 1,
-  "exportedAt": "2026-07-10T08:46:47.568Z",
+  "exportedAt": "2026-07-13T04:47:53.584Z",
   "selectedMonth": "2026-07",
   "state": {
     "version": 4,
@@ -72,7 +72,7 @@
         },
         {
           "id": "rv-r4",
-          "name": "홍진기(퇴사)",
+          "name": "홍진기 (퇴직)",
           "category": "조활비",
           "amount": 80000
         },
@@ -107,7 +107,7 @@
     "months": {
       "2026-07": [
         {
-          "id": "mrbupy9zbh2i6e",
+          "id": "mriqk6g22rlyjb",
           "date": "2026-07-08",
           "group": "공통",
           "description": "공통 간식비",
@@ -121,29 +121,29 @@
           },
           "receiptRequired": false,
           "note": "",
-          "createdAt": 1783501460423,
-          "updatedAt": 1783501460423
+          "createdAt": 1783917735842,
+          "updatedAt": 1783917749156
         },
         {
-          "id": "mrbuqgo7qkn2ah",
+          "id": "mriql0quk9kzxi",
           "date": "2026-07-02",
           "group": "공통",
-          "description": "실 점심(제주이야기)",
-          "amount": 16500,
+          "description": "실 점심 (제주이야기)",
+          "amount": 13500,
           "category": "조활비",
           "systemGroup": "보상팀",
           "allocations": {
-            "보상팀": 8250,
-            "평가팀": 8250,
+            "보상팀": 6750,
+            "평가팀": 6750,
             "실장님": 0
           },
           "receiptRequired": false,
           "note": "",
-          "createdAt": 1783501484263,
-          "updatedAt": 1783501484263
+          "createdAt": 1783917775110,
+          "updatedAt": 1783917995433
         },
         {
-          "id": "mreoyjq7qc21by",
+          "id": "mriqm2i0xxqhzw",
           "date": "2026-07-06",
           "group": "공통",
           "description": "생일 케이크 (경민님)",
@@ -155,10 +155,10 @@
             "평가팀": 33750,
             "실장님": 0
           },
-          "receiptRequired": true,
+          "receiptRequired": false,
           "note": "",
-          "createdAt": 1783673182303,
-          "updatedAt": 1783673206478
+          "createdAt": 1783917824040,
+          "updatedAt": 1783917824040
         }
       ]
     },
@@ -181,6 +181,6 @@
         }
       }
     },
-    "lastUpdatedAt": 1783673207568
+    "lastUpdatedAt": 1783918073584
   }
 }
